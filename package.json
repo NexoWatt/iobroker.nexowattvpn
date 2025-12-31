@@ -1,6 +1,6 @@
 {
   "name": "iobroker.nexowattvpn",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "ioBroker adapter that manages a WireGuard VPN with strict host-only access (Admin/VIS/selected ports).",
   "author": "NexoWatt (generated scaffold)",
   "homepage": "https://github.com/nexowatt/iobroker.nexowattvpn",

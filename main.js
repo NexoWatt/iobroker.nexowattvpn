@@ -97,7 +97,7 @@ class NexoWattVPN extends utils.Adapter {
       switch (obj.command) {
         case "sudoCheck": {
           const ok = await this._sudoCheck();
-          reply({ text: ok ? "OK: sudo non-interactive is available (NOPASSWD)" : "ERROR: sudo -n not permitted for this adapter (bootstrap missing)", icon: ok ? "info" : "error" });
+          reply({ text: ok ? "OK: sudo ohne Passwort (NOPASSWD) ist verfügbar" : "FEHLER: sudo -n ist nicht erlaubt (Bootstrap/sudoers fehlt)", icon: ok ? "info" : "error" });
           break;
         }
         case "prereqCheck": {
@@ -105,16 +105,90 @@ class NexoWattVPN extends utils.Adapter {
           reply({ text: JSON.stringify(res.result, null, 2), icon: "info" });
           break;
         }
+        case "healthOverview": {
+          // Übersicht / Ampel als HTML
+          const sudoOk = await this._sudoCheck();
+          let prereqs = null;
+          let prereqOk = false;
+          let health = null;
+          let firewall = null;
+
+          if (sudoOk) {
+            try {
+              const r1 = await this._callHelper("prereqCheck", { cfg });
+              prereqs = r1.result || null;
+              prereqOk = !!(prereqs?.commands?.wg && prereqs?.commands?.wgQuick && prereqs?.commands?.nft);
+            } catch (e) {
+              prereqs = null;
+              prereqOk = false;
+            }
+
+            try {
+              const r2 = await this._callHelper("health", { cfg });
+              health = r2.result || null;
+              firewall = health?.firewall || null;
+            } catch (e) {
+              health = null;
+              firewall = null;
+            }
+          }
+
+          const lamp = (state) => {
+            if (state === true) return "🟢";
+            if (state === "warn") return "🟡";
+            return "🔴";
+          };
+
+          const endpointSet = !!String(cfg.endpointHost || "").trim();
+          const ifaceUp = !!health?.interfaceUp;
+          const confExists = !!health?.confExists;
+          const firewallOk = !!firewall?.tableExists;
+
+          const nextSteps = [];
+          if (!sudoOk) nextSteps.push("1) Tab „Installieren“ → Bootstrap‑Befehl 1× als root ausführen");
+          if (sudoOk && !prereqOk) nextSteps.push("Voraussetzungen installieren (wireguard-tools + nftables)");
+          if (sudoOk && prereqOk && !confExists) nextSteps.push("Server‑Konfiguration erstellen/aktualisieren");
+          if (sudoOk && prereqOk && confExists && !firewallOk) nextSteps.push("Firewall‑Regeln anwenden");
+          if (sudoOk && prereqOk && confExists && firewallOk && !ifaceUp) nextSteps.push("VPN starten (wg‑quick up)");
+          if (sudoOk && prereqOk && confExists && firewallOk && ifaceUp) nextSteps.push("Als Nächstes: Profile erstellen (Tab „Profile“) und mit WireGuard‑App verbinden");
+
+          const html = [
+            '<div style="display:flex;flex-direction:column;gap:10px;">',
+            '<div style="font-weight:700;font-size:14px;">System‑Status</div>',
+            '<table style="border-collapse:collapse;width:100%;">',
+            '<tbody>',
+            `<tr><td style="padding:4px 8px;border-bottom:1px solid rgba(0,0,0,0.12);">${lamp(sudoOk)} sudo‑Freigabe (sudo -n)</td><td style="padding:4px 8px;border-bottom:1px solid rgba(0,0,0,0.12);">${sudoOk ? "OK" : "FEHLT"}</td></tr>`,
+            `<tr><td style="padding:4px 8px;border-bottom:1px solid rgba(0,0,0,0.12);">${lamp(prereqOk)} Voraussetzungen (wg/wg‑quick/nft)</td><td style="padding:4px 8px;border-bottom:1px solid rgba(0,0,0,0.12);">${sudoOk ? (prereqOk ? "OK" : "FEHLT") : "–"}</td></tr>`,
+            `<tr><td style="padding:4px 8px;border-bottom:1px solid rgba(0,0,0,0.12);">${lamp(endpointSet ? true : "warn")} Endpoint (öffentlich)</td><td style="padding:4px 8px;border-bottom:1px solid rgba(0,0,0,0.12);">${endpointSet ? escapeHtml(cfg.endpointHost) : "(leer – für Client‑Configs empfohlen)"}</td></tr>`,
+            `<tr><td style="padding:4px 8px;border-bottom:1px solid rgba(0,0,0,0.12);">${lamp(confExists)} Server‑Konfiguration</td><td style="padding:4px 8px;border-bottom:1px solid rgba(0,0,0,0.12);">${sudoOk ? (confExists ? escapeHtml(health?.confPath || "") : "nicht vorhanden") : "–"}</td></tr>`,
+            `<tr><td style="padding:4px 8px;border-bottom:1px solid rgba(0,0,0,0.12);">${lamp(firewallOk ? true : "warn")} Firewall (nft)</td><td style="padding:4px 8px;border-bottom:1px solid rgba(0,0,0,0.12);">${sudoOk ? (firewallOk ? "aktiv" : "nicht aktiv") : "–"}</td></tr>`,
+            `<tr><td style="padding:4px 8px;">${lamp(ifaceUp ? true : "warn")} VPN (wg‑Interface)</td><td style="padding:4px 8px;">${sudoOk ? (ifaceUp ? "läuft" : "gestoppt") : "–"}</td></tr>`,
+            '</tbody>',
+            '</table>',
+            '<div style="opacity:0.9;">',
+            '<b>Empfohlener nächster Schritt:</b><br/>',
+            nextSteps.length ? nextSteps.map((s) => `• ${escapeHtml(s)}`).join("<br/>") : "–",
+            '</div>',
+            '<div style="opacity:0.85;">',
+            '<b>Wichtig:</b> Direkter Internet‑Zugriff auf einen VPN‑Server hinter NAT benötigt i. d. R. eine UDP‑Portweiterleitung am Router. Ohne Router‑Änderung ist ein externer Hub/VPS (Reverse‑VPN) die robuste Lösung.',
+            '</div>',
+            '</div>'
+          ].join("");
+
+          reply(html);
+          break;
+        }
+
         case "installPrereqs": {
           const res = await this._callHelper("installPrereqs", { cfg });
-          reply({ text: `OK: Prereqs installed/verified.\n${JSON.stringify(res.result, null, 2)}`, icon: "install" });
+          reply({ text: `OK: Voraussetzungen installiert/überprüft.\n${JSON.stringify(res.result, null, 2)}`, icon: "install" });
           break;
         }
 
         case "fullSetup": {
           const res = await this._callHelper("fullSetup", { cfg });
           await this._pollStatus().catch(() => {});
-          reply({ text: `OK: Full setup completed.\n${JSON.stringify(res.result, null, 2)}`, icon: "connection" });
+          reply({ text: `OK: Full‑Setup abgeschlossen.\n${JSON.stringify(res.result, null, 2)}`, icon: "connection" });
           break;
         }
         case "bootstrapCommand": {
@@ -135,29 +209,29 @@ class NexoWattVPN extends utils.Adapter {
         case "ensureServer": {
           const res = await this._callHelper("ensureServer", { cfg });
           await this._pollStatus().catch(() => {});
-          reply({ text: `OK: Server config ensured. ServerPublicKey=${res?.result?.serverPublicKey || ""}`, icon: "connection" });
+          reply({ text: `OK: Server‑Konfiguration erstellt/aktualisiert. ServerPublicKey=${res?.result?.serverPublicKey || ""}`, icon: "connection" });
           break;
         }
         case "up": {
           await this._callHelper("up", { cfg });
           await this._pollStatus().catch(() => {});
-          reply({ text: "OK: VPN started", icon: "play" });
+          reply({ text: "OK: VPN gestartet", icon: "play" });
           break;
         }
         case "down": {
           await this._callHelper("down", { cfg });
           await this._pollStatus().catch(() => {});
-          reply({ text: "OK: VPN stopped", icon: "stop" });
+          reply({ text: "OK: VPN gestoppt", icon: "stop" });
           break;
         }
         case "applyFirewall": {
           await this._callHelper("applyFirewall", { cfg });
-          reply({ text: `OK: Firewall applied (wg: allow tcp ${cfg.allowedPorts.join(",")})`, icon: "socket" });
+          reply({ text: `OK: Firewall angewendet (WG: erlaube TCP ${cfg.allowedPorts.join(",")})`, icon: "socket" });
           break;
         }
         case "removeFirewall": {
           await this._callHelper("removeFirewall", { cfg });
-          reply({ text: "OK: Firewall rules removed", icon: "delete" });
+          reply({ text: "OK: Firewall‑Regeln entfernt", icon: "delete" });
           break;
         }
         case "listProfiles": {
@@ -173,12 +247,19 @@ class NexoWattVPN extends utils.Adapter {
           reply({ text, icon: res.result?.interfaceUp ? "connection" : "no-connection" });
           break;
         }
+        case "firewallStatus": {
+          const res = await this._callHelper("firewallStatus", { cfg });
+          const txt = JSON.stringify(res.result, null, 2);
+          reply({ text: txt, icon: res.result?.tableExists ? "info" : "error" });
+          break;
+        }
+
         case "createProfile": {
           const profileName = (obj.message && (obj.message.profileName || obj.message.name)) || "";
           const password = (obj.message && (obj.message.password || "")) || "";
 
           if (!String(profileName).trim()) {
-            reply({ text: "ERROR: profileName is empty", style: { color: "red" }, icon: "error" });
+            reply({ text: "FEHLER: Profilname ist leer", style: { color: "red" }, icon: "error" });
             break;
           }
 
@@ -194,11 +275,11 @@ class NexoWattVPN extends utils.Adapter {
 
           const html = [
             '<div style="display:flex;flex-direction:column;gap:12px;">',
-            `<div><b>Profile:</b> ${escapeHtml(res?.result?.profileName || profileName)}</div>`,
-            `<div><b>Peer IP:</b> ${escapeHtml(res?.result?.peerIp || "")}</div>`,
-            '<div><b>Client config</b></div>',
+            `<div><b>Profil:</b> ${escapeHtml(res?.result?.profileName || profileName)}</div>`,
+            `<div><b>Peer‑IP:</b> ${escapeHtml(res?.result?.peerIp || "")}</div>`,
+            '<div><b>Client‑Konfiguration</b></div>',
             `<pre style="white-space:pre-wrap;word-break:break-word;max-height:320px;overflow:auto;border:1px solid rgba(0,0,0,0.2);padding:8px;border-radius:4px;">${escapeHtml(clientConfig)}</pre>`,
-            '<div><b>QR Code</b> (import in WireGuard app)</div>',
+            '<div><b>QR‑Code</b> (Import in WireGuard‑App)</div>',
             `<img alt="WireGuard QR" src="${qrDataUrl}" style="max-width:320px;max-height:320px;"/>`,
             '</div>',
           ].join('');
@@ -211,7 +292,7 @@ class NexoWattVPN extends utils.Adapter {
 
           await this._pollStatus().catch(() => {});
 
-          reply({ text: `OK: Profile '${res?.result?.profileName || profileName}' created. Output updated below.`, icon: "qrcode" });
+          reply({ text: `OK: Profil '${res?.result?.profileName || profileName}' erstellt/rotiert. Ausgabe unten aktualisiert.`, icon: "qrcode" });
           break;
         }
         case "revokeProfile": {
@@ -219,12 +300,12 @@ class NexoWattVPN extends utils.Adapter {
 
           // Prevent accidental removal of the dedicated Support profile via the generic flow.
           if (String(profileName) === String(cfg.supportPeerName)) {
-            reply({ text: `ERROR: '${cfg.supportPeerName}' is the Support profile. Use the Support tab to disable it.`, style: { color: "red" }, icon: "error" });
+            reply({ text: `FEHLER: '${cfg.supportPeerName}' ist das Support‑Profil. Bitte im Tab „Support“ deaktivieren.`, style: { color: "red" }, icon: "error" });
             break;
           }
 
           const res = await this._callHelper("revokeProfile", { cfg, profileName });
-          reply({ text: `OK: ${res.result?.revoked ? "revoked" : "not found"} (${profileName})`, icon: "delete" });
+          reply({ text: `OK: ${res.result?.revoked ? "widerrufen" : "nicht gefunden"} (${profileName})`, icon: "delete" });
           break;
         }
 
@@ -234,7 +315,7 @@ class NexoWattVPN extends utils.Adapter {
           const expiresMinutes = Number(expiresMinutesRaw || cfg.supportExpiryMinutes || 0);
 
           if (!String(cfg.supportPeerPublicKey || "").trim()) {
-            reply({ text: "ERROR: supportPeerPublicKey is empty. Enter the vendor support public key first.", style: { color: "red" }, icon: "error" });
+            reply({ text: "FEHLER: Public Key (Support/Vendor) ist leer. Bitte zuerst eintragen.", style: { color: "red" }, icon: "error" });
             break;
           }
 
@@ -250,13 +331,13 @@ class NexoWattVPN extends utils.Adapter {
 
           const html = [
             '<div style="display:flex;flex-direction:column;gap:12px;">',
-            `<div><b>Support profile enabled:</b> ${escapeHtml(r.profileName || cfg.supportPeerName)}</div>`,
-            `<div><b>Peer IP:</b> ${escapeHtml(r.peerIp || "")}</div>`,
-            `<div><b>Endpoint:</b> ${escapeHtml(r.endpoint || "(set endpointHost in Server tab)")}</div>`,
-            `<div><b>Client AllowedIPs:</b> ${escapeHtml(r.allowedIpsClient || "")}</div>`,
-            expiresAt ? `<div><b>Expires:</b> ${new Date(expiresAt).toISOString()}</div>` : `<div><b>Expires:</b> (no expiry configured)</div>`,
-            '<div style="opacity:0.9;">Vendor must insert their own PrivateKey into the template below.</div>',
-            '<div><b>Support client config template</b></div>',
+            `<div><b>Support‑Profil aktiviert:</b> ${escapeHtml(r.profileName || cfg.supportPeerName)}</div>`,
+            `<div><b>Peer‑IP:</b> ${escapeHtml(r.peerIp || "")}</div>`,
+            `<div><b>Endpoint:</b> ${escapeHtml(r.endpoint || "(Endpoint im Tab „Server“ setzen)")}</div>`,
+            `<div><b>AllowedIPs (Client):</b> ${escapeHtml(r.allowedIpsClient || "")}</div>`,
+            expiresAt ? `<div><b>Expires:</b> ${new Date(expiresAt).toISOString()}</div>` : `<div><b>Ablauf:</b> (keine Ablaufzeit konfiguriert)</div>`,
+            '<div style="opacity:0.9;">Der Support trägt seinen PrivateKey selbst in das Template unten ein.</div>',
+            '<div><b>Support‑Client‑Konfiguration (Template)</b></div>',
             `<pre style="white-space:pre-wrap;word-break:break-word;max-height:320px;overflow:auto;border:1px solid rgba(0,0,0,0.2);padding:8px;border-radius:4px;">${escapeHtml(r.clientConfigTemplate || "")}</pre>`,
             r.presharedKey ? `<div><b>PSK:</b> <code>${escapeHtml(r.presharedKey)}</code></div>` : "",
             '</div>',
@@ -268,7 +349,7 @@ class NexoWattVPN extends utils.Adapter {
           await this.setStateAsync("support.expiresAt", { val: expiresAt, ack: true }).catch(() => {});
           await this.setStateAsync("support.lastOutputHtml", { val: html, ack: true }).catch(() => {});
 
-          reply({ text: "OK: Support profile enabled.", icon: "connection" });
+          reply({ text: "OK: Support‑Zugang aktiviert.", icon: "connection" });
           break;
         }
 
@@ -278,7 +359,7 @@ class NexoWattVPN extends utils.Adapter {
           await this.setStateAsync("support.peerIp", { val: "", ack: true }).catch(() => {});
           await this.setStateAsync("support.expiresAt", { val: 0, ack: true }).catch(() => {});
           await this.setStateAsync("support.lastOutputHtml", { val: "", ack: true }).catch(() => {});
-          reply({ text: `OK: Support profile ${res.result?.revoked ? "disabled" : "not found"}`, icon: "delete" });
+          reply({ text: `OK: Support‑Zugang ${res.result?.revoked ? "deaktiviert" : "nicht gefunden"}`, icon: "delete" });
           break;
         }
 
@@ -289,7 +370,7 @@ class NexoWattVPN extends utils.Adapter {
             const s = peers.find((p) => String(p.name) === String(cfg.supportPeerName));
             reply({ text: JSON.stringify({ exists: !!s, peer: s || null }, null, 2), icon: s ? "connection" : "no-connection" });
           } catch (e) {
-            reply({ text: `ERROR: ${e && e.message ? e.message : e}`, style: { color: "red" }, icon: "error" });
+            reply({ text: `FEHLER: ${e && e.message ? e.message : e}`, style: { color: "red" }, icon: "error" });
           }
           break;
         }
@@ -320,7 +401,7 @@ class NexoWattVPN extends utils.Adapter {
           await this.setStateAsync("profiles.lastGeneratedName", { val: "", ack: true }).catch(() => {});
           await this.setStateAsync("profiles.lastGeneratedPeerIp", { val: "", ack: true }).catch(() => {});
           await this.setStateAsync("profiles.lastGeneratedAt", { val: 0, ack: true }).catch(() => {});
-          reply({ text: "OK: Output cleared", icon: "delete" });
+          reply({ text: "OK: Letzte Ausgabe gelöscht", icon: "delete" });
           break;
         }
 
@@ -362,17 +443,17 @@ class NexoWattVPN extends utils.Adapter {
 
           const exposure = (bind) => {
             const b = String(bind || "").trim();
-            if (!b || b === "0.0.0.0" || b === "::" || b === "::0") return "Exposed on all interfaces";
-            if (b === wgHostIp) return "VPN-only (bound to wg IP)";
-            if (b === "127.0.0.1" || b === "::1") return "Localhost only (VPN cannot reach)";
-            return `Bound to ${escapeHtml(b)}`;
+            if (!b || b === "0.0.0.0" || b === "::" || b === "::0") return "Auf allen Interfaces erreichbar";
+            if (b === wgHostIp) return "Nur VPN (an WireGuard‑IP gebunden)";
+            if (b === "127.0.0.1" || b === "::1") return "Nur Localhost (über VPN nicht erreichbar)";
+            return `Gebunden an ${escapeHtml(b)}`;
           };
 
           const rowsHtml = allowedPorts
             .map((p) => {
               const list = byPort.get(p) || [];
               if (!list.length) {
-                return `<tr><td>${p}</td><td colspan="3"><i>No ioBroker instance with native.port=${p} found</i></td></tr>`;
+                return `<tr><td>${p}</td><td colspan="3"><i>Keine ioBroker‑Instanz mit native.port=${p} gefunden</i></td></tr>`;
               }
               return list
                 .map((inst, idx) => {
@@ -390,11 +471,11 @@ class NexoWattVPN extends utils.Adapter {
 
           const html = [
             '<div style="display:flex;flex-direction:column;gap:10px;">',
-            `<div><b>WireGuard host IP:</b> ${escapeHtml(wgHostIp)}</div>`,
-            `<div><b>Allowed ports (VPN → host):</b> ${escapeHtml(allowedPorts.join(", "))}</div>`,
-            '<div style="opacity:0.9;">Tip: To make services reachable ONLY over the VPN, bind them to the WG host IP (above), not 0.0.0.0.</div>',
+            `<div><b>WireGuard‑Host‑IP:</b> ${escapeHtml(wgHostIp)}</div>`,
+            `<div><b>Erlaubte Ports (VPN → Host):</b> ${escapeHtml(allowedPorts.join(", "))}</div>`,
+            '<div style="opacity:0.9;">Tipp: Damit Dienste NUR über VPN erreichbar sind, binde sie an die WireGuard‑Host‑IP (oben) statt an 0.0.0.0.</div>',
             '<table style="border-collapse:collapse;width:100%;">',
-            '<thead><tr><th style="text-align:left;border-bottom:1px solid rgba(0,0,0,0.2);padding:4px;">Port</th><th style="text-align:left;border-bottom:1px solid rgba(0,0,0,0.2);padding:4px;">Instance</th><th style="text-align:left;border-bottom:1px solid rgba(0,0,0,0.2);padding:4px;">Bind</th><th style="text-align:left;border-bottom:1px solid rgba(0,0,0,0.2);padding:4px;">Exposure</th></tr></thead>',
+            '<thead><tr><th style="text-align:left;border-bottom:1px solid rgba(0,0,0,0.2);padding:4px;">Port</th><th style="text-align:left;border-bottom:1px solid rgba(0,0,0,0.2);padding:4px;">Instanz</th><th style="text-align:left;border-bottom:1px solid rgba(0,0,0,0.2);padding:4px;">Bind</th><th style="text-align:left;border-bottom:1px solid rgba(0,0,0,0.2);padding:4px;">Erreichbarkeit</th></tr></thead>',
             `<tbody>${rowsHtml}</tbody>`,
             '</table>',
             '</div>',
@@ -404,14 +485,14 @@ class NexoWattVPN extends utils.Adapter {
           break;
         }
         default:
-          reply({ text: `Unknown command: ${obj.command}`, icon: "no-connection" });
+          reply({ text: `Unbekannter Befehl: ${obj.command}`, icon: "no-connection" });
           break;
       }
     } catch (e) {
       const msg = e && e.message ? e.message : String(e);
       this._setLastError(e);
       this.log.error(`Command ${obj.command} failed: ${msg}`);
-      reply({ text: `ERROR: ${msg}`, style: { color: "red" }, icon: "no-connection" });
+      reply({ text: `FEHLER: ${msg}`, style: { color: "red" }, icon: "no-connection" });
     }
   }
 
@@ -516,7 +597,7 @@ class NexoWattVPN extends utils.Adapter {
   }
 
   _getEffectiveConfig() {
-    const allowedPorts = String(this.config.allowedPorts || "8081,8082,8188,8086")
+    const allowedPorts = String(this.config.allowedPorts || "8081,8082")
       .split(",")
       .map((p) => p.trim())
       .filter(Boolean)

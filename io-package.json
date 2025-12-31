@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "nexowattvpn",
-    "version": "0.0.7",
+    "version": "0.0.8",
     "news": {
       "0.0.1": {
         "en": "Initial scaffold with WireGuard + firewall helper.",
@@ -30,6 +30,10 @@
       "0.0.7": {
         "en": "Fixed: host/ folder is now included in the npm package; added one-click full setup and safer prerequisite install behavior.",
         "de": "Fix: host/ Ordner wird jetzt ins npm-Paket aufgenommen; One-Click Full-Setup ergänzt und Prereq-Installation robuster gemacht."
+      },
+      "0.0.8": {
+        "en": "UI overhaul: added overview/health panel, removed broken icons, added firewall status; improved German texts.",
+        "de": "UI überarbeitet: Übersicht/Ampel ergänzt, kaputte Icons entfernt, Firewall‑Status ergänzt; Texte auf Deutsch verbessert."
       }
     },
     "titleLang": {
@@ -73,7 +77,7 @@
     "endpointHost": "",
     "dns": "",
     "persistentKeepalive": 25,
-    "allowedPorts": "8081,8082,8188,8086",
+    "allowedPorts": "8081,8082",
     "firewallBackend": "nft",
     "openListenPort": false,
     "usePsk": true,

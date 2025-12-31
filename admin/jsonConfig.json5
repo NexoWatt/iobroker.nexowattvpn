@@ -1,56 +1,86 @@
 {
-  i18n: true,
+  i18n: false,
   type: "tabs",
   items: {
+    overview: {
+      type: "panel",
+      label: "Übersicht",
+      items: {
+        _intro: {
+          type: "staticText",
+          text: "Dieser Adapter verwaltet WireGuard auf dem ioBroker‑Host und setzt eine strikte Firewall am WG‑Interface: erlaubt werden nur die ausgewählten TCP‑Ports (z. B. 8081/8082) zum Host. Forwarding ins LAN wird blockiert (keine Netzwerk‑Durchleitung)."
+        },
+
+        _note1: {
+          type: "staticText",
+          text: "Ampel/Status: In der Instanzenliste wird \"Verbunden mit Gerät oder Dienst\" grün, sobald das WireGuard‑Interface aktiv ist (wg‑quick up)."
+        },
+
+        _health: {
+          type: "textSendTo",
+          label: "Ampel / Status (empfohlen)",
+          command: "healthOverview",
+          onLoaded: true,
+          copyToClipboard: false,
+          container: "html"
+        },
+
+        _routerNote: {
+          type: "staticText",
+          text: "Hinweis Internet-Zugriff: Für eingehende WireGuard‑Verbindungen wird in den meisten Heimnetzen eine UDP‑Portweiterleitung (z. B. 51820) im Router benötigt. Ohne Router‑Änderung funktioniert es nur, wenn der Host direkt öffentlich erreichbar ist (öffentliche IPv4/IPv6) oder über einen externen Hub/VPS (Reverse‑VPN)."
+        }
+      }
+    },
+
     server: {
       type: "panel",
       label: "Server",
-      icon: "settings",
       items: {
         _info1: {
           type: "staticText",
-          text: "This adapter manages WireGuard and applies a strict firewall on the WG interface: allow only selected TCP ports (default: 8081,8082,8188,8086) and block forwarding to the LAN."
+          text: "Schrittfolge (typisch): 1) Server‑Konfiguration erstellen/aktualisieren → 2) Firewall anwenden → 3) VPN starten."
         },
 
-        enabled: { type: "checkbox", label: "Enable (auto start)", sm: 6, md: 4 },
-        ifaceName: { type: "text", label: "WireGuard interface name", sm: 6, md: 4, placeholder: "wg-nexowattvpn" },
-        listenPort: { type: "port", label: "WireGuard listen port (UDP)", sm: 6, md: 4 },
+        enabled: { type: "checkbox", label: "Aktivieren (Auto‑Start)", sm: 6, md: 4 },
+        ifaceName: { type: "text", label: "WireGuard Interface‑Name", sm: 6, md: 4, placeholder: "wg-nexowattvpn" },
+        listenPort: { type: "port", label: "WireGuard Port (UDP)", sm: 6, md: 4 },
 
-        vpnCidr: { type: "text", label: "VPN network (CIDR)", sm: 6, md: 4, placeholder: "10.80.80.0/24" },
-        hostVpnIp: { type: "text", label: "Host VPN address (CIDR)", sm: 6, md: 4, placeholder: "10.80.80.1/24" },
-        endpointHost: { type: "text", label: "Endpoint hostname/IP (public)", sm: 6, md: 4, placeholder: "my.dyndns.org" },
+        vpnCidr: { type: "text", label: "VPN Netzwerk (CIDR)", sm: 6, md: 4, placeholder: "10.80.80.0/24" },
+        hostVpnIp: { type: "text", label: "Host VPN Adresse (CIDR)", sm: 6, md: 4, placeholder: "10.80.80.1/24" },
+        endpointHost: { type: "text", label: "Endpoint Hostname/IP (öffentlich)", sm: 6, md: 4, placeholder: "my.dyndns.org" },
 
-        dns: { type: "text", label: "DNS for clients (optional)", sm: 6, md: 4, placeholder: "192.168.1.1" },
-        persistentKeepalive: { type: "number", label: "PersistentKeepalive (client)", sm: 6, md: 4, min: 0, max: 300, step: 1 },
-        usePsk: { type: "checkbox", label: "Use PSK (recommended)", sm: 6, md: 4 },
+        dns: { type: "text", label: "DNS für Clients (optional)", sm: 6, md: 4, placeholder: "192.168.1.1" },
+        persistentKeepalive: { type: "number", label: "PersistentKeepalive (Client)", sm: 6, md: 4, min: 0, max: 300, step: 1 },
+        usePsk: { type: "checkbox", label: "PSK verwenden (empfohlen)", sm: 6, md: 4 },
 
-        allowedPorts: { type: "text", label: "Allowed TCP ports via VPN", sm: 6, md: 4, placeholder: "8081,8082,8188,8086" },
-        _firewallBackend: { type: "staticText", text: "Firewall backend is fixed to nftables (nft). iptables is not used.", sm: 12, md: 8 },
-        openListenPort: { type: "checkbox", label: "Open UDP listenPort in firewall (not implemented)", sm: 12, md: 6, hidden: true },
+        allowedPorts: { type: "text", label: "Erlaubte TCP‑Ports über VPN", sm: 6, md: 6, placeholder: "8081,8082" },
+        _firewallBackend: { type: "staticText", text: "Firewall‑Backend: nftables (nft). iptables wird nicht verwendet.", sm: 12, md: 8 },
 
         _divider1: { type: "divider" },
 
-        _ensure: { type: "sendTo", label: "Initialize/Update server config", icon: "send", command: "ensureServer", showProcess: true, timeout: 60000 },
-        _fw: { type: "sendTo", label: "Apply firewall rules (WG interface)", icon: "warning", command: "applyFirewall", showProcess: true, timeout: 60000 },
-        _rmfw: { type: "sendTo", label: "Remove firewall rules", icon: "delete", command: "removeFirewall", showProcess: true, timeout: 60000 },
+        _ensure: { type: "sendTo", label: "Server‑Konfiguration erstellen/aktualisieren", command: "ensureServer", showProcess: true, timeout: 60000 },
+        _fw: { type: "sendTo", label: "Firewall‑Regeln anwenden (WG‑Interface)", command: "applyFirewall", showProcess: true, timeout: 60000 },
+        _up: { type: "sendTo", label: "VPN starten (wg‑quick up)", command: "up", showProcess: true, timeout: 60000 },
 
-        _up: { type: "sendTo", label: "Start VPN (wg-quick up)", icon: "play", command: "up", showProcess: true, timeout: 60000 },
-        _down: { type: "sendTo", label: "Stop VPN (wg-quick down)", icon: "stop", command: "down", showProcess: true, timeout: 60000 },
+        _down: { type: "sendTo", label: "VPN stoppen (wg‑quick down)", command: "down", showProcess: true, timeout: 60000 },
+        _rmfw: { type: "sendTo", label: "Firewall‑Regeln entfernen", command: "removeFirewall", showProcess: true, timeout: 60000 },
 
-        _serverKey: { type: "textSendTo", label: "Server public key", command: "getServerPublicKey", onLoaded: true, copyToClipboard: true, container: "text" },
+        _dividerStatus: { type: "divider" },
 
+        _serverKey: { type: "textSendTo", label: "Server Public Key", command: "getServerPublicKey", onLoaded: true, copyToClipboard: true, container: "text" },
         _status: { type: "textSendTo", label: "Status (wg show)", command: "status", onLoaded: false, copyToClipboard: true, container: "text" },
+        _fwStatus: { type: "textSendTo", label: "Firewall‑Status (nft)", command: "firewallStatus", onLoaded: true, copyToClipboard: true, container: "text" },
 
         _dividerBind: { type: "divider" },
 
         _bindInfo: {
           type: "staticText",
-          text: "Optional hardening: If you want ioBroker Admin/Web/VIS to be reachable ONLY through the VPN, bind them to the WireGuard host address (hostVpnIp without prefix) instead of 0.0.0.0. This adapter does not auto-change other instances, but it can check your current binds below."
+          text: "Optional (Hardening): Wenn ioBroker Admin/Web/Vis NUR über VPN erreichbar sein soll, binde diese Dienste an die WireGuard‑Host‑Adresse (hostVpnIp ohne /24), statt an 0.0.0.0. Der Adapter ändert andere Instanzen nicht automatisch, kann aber unten prüfen, wie sie aktuell gebunden sind."
         },
 
         _bindingCheck: {
           type: "textSendTo",
-          label: "Binding & exposure check",
+          label: "Bind/Exposure‑Check (Ports)",
           command: "bindingCheck",
           onLoaded: true,
           container: "html",
@@ -62,20 +92,18 @@
 
     install: {
       type: "panel",
-      label: "Install",
-      icon: "install",
+      label: "Installieren",
       items: {
         _intro: {
           type: "staticText",
-          text: "Optional installer: This can auto-install required system packages (wireguard-tools + nftables) on Debian/Ubuntu/Raspberry Pi OS and apply minimal hardening (disable forwarding).\n\nImportant: The adapter cannot obtain root privileges by itself. You must either (a) run the Bootstrap command once as root to create a minimal sudoers rule, or (b) pre-provision your devices with the host auto-installer (Model A) so it can configure sudoers automatically after the adapter is installed."
+          text: "Dieser Bereich hilft bei der System‑Einrichtung. Wichtig: Der Adapter läuft als Benutzer 'iobroker' und benötigt für System‑Aktionen einmalig eine minimale sudo‑Freigabe (NOPASSWD) für den Root‑Helper."
         },
 
-        serviceUser: { type: "text", label: "ioBroker service user (sudoers)", sm: 6, md: 4, placeholder: "iobroker" },
+        serviceUser: { type: "text", label: "ioBroker Service‑Benutzer (sudoers)", sm: 6, md: 4, placeholder: "iobroker" },
 
         _prereq: {
           type: "textSendTo",
-          label: "Prerequisites check",
-          icon: "info",
+          label: "Voraussetzungen prüfen (wg/nft)",
           command: "prereqCheck",
           onLoaded: true,
           copyToClipboard: true,
@@ -84,8 +112,7 @@
 
         _sudo: {
           type: "textSendTo",
-          label: "Sudo permission check (sudo -n)",
-          icon: "info",
+          label: "sudo‑Freigabe prüfen (sudo -n)",
           command: "sudoCheck",
           onLoaded: true,
           copyToClipboard: true,
@@ -94,8 +121,7 @@
 
         _bootstrap: {
           type: "textSendTo",
-          label: "Bootstrap command (run once in terminal as root)",
-          icon: "terminal",
+          label: "Bootstrap‑Befehl (1× im Terminal als root ausführen)",
           command: "bootstrapCommand",
           onLoaded: true,
           copyToClipboard: true,
@@ -105,62 +131,57 @@
 
         _install: {
           type: "sendTo",
-          label: "Install/Repair prerequisites (apt)",
-          icon: "install",
+          label: "Voraussetzungen installieren/reparieren (apt)",
           command: "installPrereqs",
           showProcess: true,
           timeout: 1200000,
-          confirm: "This will run apt-get update/install and enable nftables. Continue?"
+          confirm: "Das führt apt-get update/install aus und aktiviert nftables. Fortfahren?"
         },
 
         _fullSetup: {
           type: "sendTo",
-          label: "One-click full setup (prereqs + server + firewall + start)",
-          icon: "connection",
+          label: "One‑Click Full‑Setup (Prereqs + Server + Firewall + Start)",
           command: "fullSetup",
           showProcess: true,
           timeout: 1200000,
-          confirm: "This will install/verify prereqs, create/update WG config, apply firewall rules and start the VPN. Continue?"
+          confirm: "Das installiert/prüft Voraussetzungen, erstellt/aktualisiert die WG‑Config, setzt Firewall‑Regeln und startet die VPN. Fortfahren?"
         }
       }
     },
 
     profiles: {
       type: "panel",
-      label: "Profiles",
-      icon: "user",
+      label: "Profile",
       items: {
         _info2: {
           type: "staticText",
-          text: "Create a WireGuard client profile. AllowedIPs in the client config is restricted to the ioBroker host VPN IP (/32), so clients cannot reach your LAN.\n\nProfile name rules: only a-z A-Z 0-9 _ . - (no spaces)."
+          text: "Hier erzeugst du Client‑Profile für die WireGuard‑App. Standardmäßig ist AllowedIPs in der Client‑Config auf die Host‑VPN‑IP (/32) beschränkt – damit gibt es keinen Zugriff ins LAN."
         },
 
-        _profileName: { type: "text", label: "Profile name", sm: 6, md: 4, placeholder: "phone-john" },
-        _profilePassword: { type: "password", label: "Password (optional → PSK derived)", sm: 6, md: 4, placeholder: "leave empty for random PSK" },
+        _profileName: { type: "text", label: "Profilname", sm: 6, md: 4, placeholder: "phone-max" },
+        _profilePassword: { type: "password", label: "Passwort (optional → PSK abgeleitet)", sm: 6, md: 4, placeholder: "leer lassen = zufällige PSK" },
 
         _createBtn: {
           type: "sendTo",
-          label: "Create/Rotate profile + generate client config + QR",
-          icon: "qrcode",
+          label: "Profil erstellen/rotieren + Client‑Config + QR",
           command: "createProfile",
           showProcess: true,
           timeout: 60000,
-          confirm: "This will add/rotate a peer in /etc/wireguard/<iface>.conf. Continue?",
+          confirm: "Das fügt einen Peer in /etc/wireguard/<iface>.conf hinzu bzw. rotiert ihn. Fortfahren?",
           jsonData: "{\"profileName\":\"${data._profileName}\",\"password\":\"${data._profilePassword}\"}",
           alsoDependsOn: ["_profileName", "_profilePassword"]
         },
 
         _clearOutput: {
           type: "sendTo",
-          label: "Clear last generated output",
-          icon: "delete",
+          label: "Letzte Ausgabe löschen (empfohlen)",
           command: "clearLastOutput",
           showProcess: false
         },
 
         _lastOutput: {
           type: "state",
-          label: "Last generated output (client config + QR)",
+          label: "Letzte erzeugte Ausgabe (Client‑Config + QR)",
           oid: "profiles.lastGeneratedHtml",
           control: "html",
           xs: 12,
@@ -171,8 +192,7 @@
 
         _listProfiles: {
           type: "textSendTo",
-          label: "List profiles (from config)",
-          icon: "list",
+          label: "Profile auflisten (aus Konfiguration)",
           command: "listProfiles",
           onLoaded: false,
           copyToClipboard: true,
@@ -181,8 +201,7 @@
 
         _revokeProfile: {
           type: "selectSendTo",
-          label: "Select profile to revoke",
-          icon: "user",
+          label: "Profil auswählen (zum Widerruf)",
           command: "profileOptions",
           noTranslation: true,
           manual: true,
@@ -192,20 +211,18 @@
 
         _revokeSelected: {
           type: "sendTo",
-          label: "Revoke selected profile",
-          icon: "delete",
+          label: "Ausgewähltes Profil widerrufen",
           command: "revokeProfile",
           showProcess: true,
           timeout: 60000,
-          confirm: "Revoke the selected profile?",
+          confirm: "Ausgewähltes Profil wirklich widerrufen?",
           jsonData: "{\"profileName\":\"${data._revokeProfile}\"}",
           alsoDependsOn: ["_revokeProfile"]
         },
 
         _revokeByName: {
           type: "sendTo",
-          label: "Revoke profile by name (uses Profile name field above)",
-          icon: "delete",
+          label: "Profil nach Name widerrufen (Profilname oben)",
           command: "revokeProfile",
           showProcess: true,
           timeout: 60000,
@@ -217,54 +234,50 @@
 
     support: {
       type: "panel",
-      label: "Support",
-      icon: "help",
+      label: "Support (optional)",
       items: {
         _sInfo: {
           type: "staticText",
-          text: "Support access is OPT-IN. When enabled, a dedicated peer (public key) is added to WireGuard. You can disable it any time; optionally set an expiry.\n\nThis is designed to avoid hidden permanent access and keeps the customer in control."
+          text: "Support‑Zugang ist OPT‑IN. Wenn aktiviert, wird ein dedizierter Peer (PublicKey) in WireGuard eingetragen. Der Kunde kann ihn jederzeit deaktivieren; optional mit Ablaufzeit. Ziel: kein versteckter Dauerzugang."
         },
 
-        supportPeerName: { type: "text", label: "Support peer name", sm: 6, md: 4, placeholder: "nexowatt-support" },
-        supportPeerPublicKey: { type: "text", label: "Vendor support public key", sm: 12, md: 8, placeholder: "<paste WireGuard public key>" },
-        supportExpiryMinutes: { type: "number", label: "Expiry (minutes, 0 = none)", sm: 6, md: 4, min: 0, max: 10080, step: 1 },
+        supportPeerName: { type: "text", label: "Support‑Peer‑Name", sm: 6, md: 4, placeholder: "nexowatt-support" },
+        supportPeerPublicKey: { type: "text", label: "Public Key (Support/Vendor)", sm: 12, md: 8, placeholder: "<WireGuard PublicKey einfügen>" },
+        supportExpiryMinutes: { type: "number", label: "Ablaufzeit (Minuten, 0 = keine)", sm: 6, md: 4, min: 0, max: 10080, step: 1 },
 
-        _supportPassword: { type: "password", label: "Password (optional → PSK derived)", sm: 6, md: 4, placeholder: "leave empty for random PSK" },
+        _supportPassword: { type: "password", label: "Passwort (optional → PSK abgeleitet)", sm: 6, md: 4, placeholder: "leer lassen = zufällige PSK" },
 
         _enableSupport: {
           type: "sendTo",
-          label: "Enable Support Access",
-          icon: "connection",
+          label: "Support‑Zugang aktivieren",
           command: "enableSupportProfile",
           showProcess: true,
           timeout: 60000,
-          confirm: "Enable support access now? This will add/rotate the support peer in /etc/wireguard/<iface>.conf.",
+          confirm: "Support‑Zugang jetzt aktivieren? (Peer wird hinzugefügt/rotiert)",
           jsonData: "{\"password\":\"${data._supportPassword}\",\"expiresMinutes\":\"${data.supportExpiryMinutes}\"}",
           alsoDependsOn: ["supportPeerPublicKey", "supportPeerName", "supportExpiryMinutes", "_supportPassword"]
         },
 
         _disableSupport: {
           type: "sendTo",
-          label: "Disable Support Access",
-          icon: "delete",
+          label: "Support‑Zugang deaktivieren",
           command: "disableSupportProfile",
           showProcess: true,
           timeout: 60000,
-          confirm: "Disable support access and remove the support peer?"
+          confirm: "Support‑Zugang deaktivieren und Peer entfernen?"
         },
 
         _supportStates: {
           type: "staticText",
-          text: "Current support state (from ioBroker states):"
+          text: "Aktueller Support‑Status (aus ioBroker‑States):"
         },
 
-        _supportActive: { type: "state", label: "Support active", oid: "support.active", control: "text", xs: 12, newLine: true },
-        _supportExpires: { type: "state", label: "Support expiresAt", oid: "support.expiresAt", control: "text", xs: 12, newLine: true },
+        _supportActive: { type: "state", label: "Support aktiv", oid: "support.active", control: "text", xs: 12, newLine: true },
+        _supportExpires: { type: "state", label: "Ablaufzeit (timestamp)", oid: "support.expiresAt", control: "text", xs: 12, newLine: true },
 
         _supportStatus: {
           type: "textSendTo",
-          label: "Support profile status (from WG config)",
-          icon: "info",
+          label: "Support‑Peer Status (aus WG‑Konfiguration)",
           command: "supportStatus",
           onLoaded: false,
           copyToClipboard: true,
@@ -273,7 +286,7 @@
 
         _supportOut: {
           type: "state",
-          label: "Support output (template)",
+          label: "Support‑Ausgabe (Template)",
           oid: "support.lastOutputHtml",
           control: "html",
           xs: 12,
