@@ -1,0 +1,286 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="stylesheet" href="../../lib/css/materialize.css">
+  <link rel="stylesheet" href="../../css/adapter.css">
+  <style>
+    .nexo-muted { opacity: 0.8; }
+    .nexo-mono { font-family: monospace; }
+    .nexo-table td { vertical-align: top; }
+    .nexo-actions a { margin-right: 8px; }
+    .nexo-badge { display:inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+    .nexo-badge-ok { background: #e8f5e9; }
+    .nexo-badge-warn { background: #fff3e0; }
+    .nexo-badge-bad { background: #ffebee; }
+    .nexo-pre { white-space: pre-wrap; word-break: break-word; }
+    .nexo-qr svg { max-width: 320px; height: auto; }
+  </style>
+</head>
+
+<body>
+
+<div class="m adapter-container">
+  <div class="row">
+    <div class="col s12">
+      <ul class="tabs">
+        <li class="tab col s3"><a href="#tab-settings" class="active translate">Settings</a></li>
+        <li class="tab col s3"><a href="#tab-clients" class="translate">Clients</a></li>
+        <li class="tab col s3"><a href="#tab-firewall" class="translate">Firewall</a></li>
+        <li class="tab col s3"><a href="#tab-status" class="translate">Status</a></li>
+      </ul>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="tab-settings" class="col s12 page">
+      <div class="row">
+        <div class="col s12 m8 l6">
+          <h6 class="translate">Adapter settings</h6>
+
+          <div class="input-field">
+            <input class="value" id="pivpnBinary" type="text">
+            <label for="pivpnBinary" class="translate">PiVPN binary path</label>
+            <span class="helper-text translate">Default is /usr/local/bin/pivpn</span>
+          </div>
+
+          <div class="input-field">
+            <select class="value" id="protocol">
+              <option value="auto" class="translate">auto</option>
+              <option value="wireguard" class="translate">wireguard</option>
+              <option value="openvpn" class="translate">openvpn</option>
+            </select>
+            <label for="protocol" class="translate">Protocol</label>
+          </div>
+
+          <p>
+            <label>
+              <input type="checkbox" class="value" id="useSudo">
+              <span class="translate">Use sudo (recommended)</span>
+            </label>
+          </p>
+
+          <h6 class="translate">Defaults for new profiles</h6>
+          <div class="input-field">
+            <select class="value" id="defaultCustomerScope">
+              <option value="hostOnly" class="translate">hostOnly (recommended)</option>
+              <option value="lan" class="translate">lan</option>
+              <option value="fullTunnel" class="translate">fullTunnel</option>
+            </select>
+            <label for="defaultCustomerScope" class="translate">Customer scope</label>
+          </div>
+
+          <div class="input-field">
+            <select class="value" id="defaultServiceScope">
+              <option value="fullTunnel" class="translate">fullTunnel</option>
+              <option value="lan" class="translate">lan</option>
+              <option value="hostOnly" class="translate">hostOnly</option>
+            </select>
+            <label for="defaultServiceScope" class="translate">Service scope</label>
+          </div>
+
+          <h6 class="translate">Firewall options</h6>
+          <p class="nexo-muted translate">
+            Host-only access means: VPN clients should only reach the Raspberry Pi itself, not other LAN devices.
+          </p>
+
+          <p>
+            <label>
+              <input type="checkbox" class="value" id="blockForwarding">
+              <span class="translate">Block forwarding (VPN ➜ LAN)</span>
+            </label>
+          </p>
+
+          <p>
+            <label>
+              <input type="checkbox" class="value" id="restrictPorts">
+              <span class="translate">Restrict ports from VPN interface (allowlist)</span>
+            </label>
+          </p>
+
+          <div class="input-field">
+            <input class="value" id="extraTcpPorts" type="text">
+            <label for="extraTcpPorts" class="translate">Extra allowed TCP ports (CSV)</label>
+            <span class="helper-text translate">Example: 8086,8188</span>
+          </div>
+
+          <div class="input-field">
+            <input class="value" id="extraUdpPorts" type="text">
+            <label for="extraUdpPorts" class="translate">Extra allowed UDP ports (CSV)</label>
+            <span class="helper-text translate">Optional</span>
+          </div>
+
+          <div class="row">
+            <div class="col s12">
+              <p class="nexo-muted translate">
+                After changing settings, click SAVE at the top to apply. Some functions require a restart.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="col s12 m4 l6">
+          <h6 class="translate">Important notes</h6>
+          <ul class="collection">
+            <li class="collection-item translate">PiVPN must already be installed (curl -L https://install.pivpn.io | bash).</li>
+            <li class="collection-item translate">For non-root operation the ioBroker user needs sudo permissions for specific commands (see README.md).</li>
+            <li class="collection-item translate">WireGuard client names are limited to 15 characters (PiVPN).</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLIENTS -->
+    <div id="tab-clients" class="col s12 page">
+      <div class="row">
+        <div class="col s12">
+          <h6 class="translate">Server info</h6>
+          <div id="serverInfo" class="nexo-pre nexo-mono"></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col s12 m6">
+          <h6 class="translate">Create profile</h6>
+
+          <div class="input-field">
+            <input id="newName" type="text">
+            <label for="newName" class="translate">Client name</label>
+            <span class="helper-text translate">Allowed: a-z A-Z 0-9 . @ _ -</span>
+          </div>
+
+          <div class="input-field">
+            <select id="newType">
+              <option value="service" class="translate">service</option>
+              <option value="customer" class="translate">customer</option>
+            </select>
+            <label for="newType" class="translate">Profile type</label>
+          </div>
+
+          <div class="input-field">
+            <select id="newScope">
+              <option value="hostOnly" class="translate">hostOnly</option>
+              <option value="lan" class="translate">lan</option>
+              <option value="fullTunnel" class="translate">fullTunnel</option>
+            </select>
+            <label for="newScope" class="translate">Scope (AllowedIPs)</label>
+          </div>
+
+          <div class="input-field">
+            <input id="newLanCidr" type="text" placeholder="192.168.1.0/24">
+            <label for="newLanCidr" class="translate">LAN CIDR (optional)</label>
+            <span class="helper-text translate">Only used when scope=lan and auto-detection fails.</span>
+          </div>
+
+          <div class="input-field">
+            <input id="newPassword" type="text">
+            <label for="newPassword" class="translate">OpenVPN password (optional)</label>
+            <span class="helper-text translate">Only for OpenVPN. Leave empty to create nopass profile.</span>
+          </div>
+
+          <a id="btnCreate" class="waves-effect waves-light btn translate">Create</a>
+          <span id="createResult" class="nexo-muted"></span>
+        </div>
+
+        <div class="col s12 m6">
+          <h6 class="translate">Existing profiles</h6>
+          <a id="btnRefresh" class="waves-effect waves-light btn-flat translate">Refresh</a>
+          <div id="clientsError" class="red-text"></div>
+
+          <table class="highlight nexo-table">
+            <thead>
+              <tr>
+                <th class="translate">Name</th>
+                <th class="translate">Type</th>
+                <th class="translate">Scope</th>
+                <th class="translate">Status</th>
+                <th class="translate">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="clientsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- FIREWALL -->
+    <div id="tab-firewall" class="col s12 page">
+      <div class="row">
+        <div class="col s12 m8 l6">
+          <h6 class="translate">Firewall helper</h6>
+          <p class="nexo-muted translate">
+            This applies iptables rules for the VPN interface. It can optionally block VPN ➜ LAN forwarding and/or restrict inbound ports from VPN clients.
+          </p>
+
+          <a id="btnDetectPorts" class="waves-effect waves-light btn-flat translate">Detect ioBroker ports</a>
+          <div class="input-field">
+            <input id="fwTcpPorts" type="text">
+            <label for="fwTcpPorts" class="translate">Allowed TCP ports (CSV)</label>
+          </div>
+
+          <div class="input-field">
+            <input id="fwUdpPorts" type="text">
+            <label for="fwUdpPorts" class="translate">Allowed UDP ports (CSV)</label>
+          </div>
+
+          <p>
+            <label>
+              <input type="checkbox" id="fwBlockForwarding">
+              <span class="translate">Block forwarding (VPN ➜ LAN)</span>
+            </label>
+          </p>
+
+          <p>
+            <label>
+              <input type="checkbox" id="fwRestrictPorts">
+              <span class="translate">Restrict INPUT ports (allowlist)</span>
+            </label>
+          </p>
+
+          <a id="btnApplyFirewall" class="waves-effect waves-light btn translate">Apply firewall</a>
+          <div id="fwResult" class="nexo-pre nexo-mono"></div>
+        </div>
+
+        <div class="col s12 m4 l6">
+          <h6 class="translate">Warning</h6>
+          <p class="nexo-muted translate">
+            Misconfigured firewall rules can lock you out. Test locally on the Raspberry Pi first.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATUS -->
+    <div id="tab-status" class="col s12 page">
+      <div class="row">
+        <div class="col s12">
+          <h6 class="translate">Runtime status</h6>
+          <a id="btnStatus" class="waves-effect waves-light btn-flat translate">Refresh status</a>
+          <div id="statusInfo" class="nexo-pre nexo-mono"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- QR Modal -->
+<div id="qrModal" class="modal">
+  <div class="modal-content">
+    <h6 class="translate">WireGuard QR Code</h6>
+    <div id="qrContainer" class="nexo-qr"></div>
+  </div>
+  <div class="modal-footer">
+    <a href="#!" class="modal-close waves-effect waves-green btn-flat translate">Close</a>
+  </div>
+</div>
+
+<script src="../../lib/js/jquery-3.6.0.min.js"></script>
+<script src="../../lib/js/materialize.js"></script>
+<script src="../../js/adapter-settings.js"></script>
+<script src="words.js"></script>
+<script src="index_m.js"></script>
+
+</body>
+</html>

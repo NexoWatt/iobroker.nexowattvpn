@@ -1,0 +1,150 @@
+{
+  "common": {
+    "name": "nexowattvpn",
+    "version": "0.0.1",
+    "news": {
+      "0.0.1": {
+        "en": "Initial development version.",
+        "de": "Initiale Entwicklungsversion."
+      }
+    },
+    "titleLang": {
+      "en": "Nexowatt VPN (PiVPN UI)",
+      "de": "Nexowatt VPN (PiVPN UI)"
+    },
+    "desc": {
+      "en": "Local UI helpers for PiVPN (WireGuard/OpenVPN): create/remove clients, export configs, optional VPN-to-RPi firewall hardening.",
+      "de": "Lokale UI-Helfer für PiVPN (WireGuard/OpenVPN): Clients anlegen/entfernen, Configs exportieren, optional VPN-zu-RPi Firewall-Härtung."
+    },
+    "authors": [
+      "Nexowatt"
+    ],
+    "keywords": [
+      "pivpn",
+      "wireguard",
+      "openvpn",
+      "vpn",
+      "nexowatt"
+    ],
+    "license": "MIT",
+    "platform": "Javascript/Node.js",
+    "mode": "daemon",
+    "type": "utility",
+    "compact": true,
+    "connectionType": "local",
+    "dataSource": "push",
+    "enabled": true,
+    "materialize": true,
+    "icon": "nexowattvpn.png",
+    "loglevel": "info"
+  },
+  "native": {
+    "useSudo": true,
+    "pivpnBinary": "/usr/local/bin/pivpn",
+    "protocol": "auto",
+    "blockForwarding": true,
+    "restrictPorts": false,
+    "extraTcpPorts": "8086,8188",
+    "extraUdpPorts": "",
+    "defaultCustomerScope": "hostOnly",
+    "defaultServiceScope": "fullTunnel"
+  },
+  "instanceObjects": [
+    {
+      "_id": "info.connection",
+      "type": "state",
+      "common": {
+        "name": {
+          "en": "VPN service reachable",
+          "de": "VPN-Dienst erreichbar"
+        },
+        "type": "boolean",
+        "role": "indicator.connected",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.protocol",
+      "type": "state",
+      "common": {
+        "name": {
+          "en": "Detected VPN protocol",
+          "de": "Erkanntes VPN-Protokoll"
+        },
+        "type": "string",
+        "role": "text",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.lastError",
+      "type": "state",
+      "common": {
+        "name": {
+          "en": "Last error",
+          "de": "Letzter Fehler"
+        },
+        "type": "string",
+        "role": "text",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
+    },
+    {
+      "_id": "profiles.meta",
+      "type": "state",
+      "common": {
+        "name": {
+          "en": "Profiles metadata (JSON)",
+          "de": "Profil-Metadaten (JSON)"
+        },
+        "type": "string",
+        "role": "json",
+        "read": true,
+        "write": true,
+        "def": "{}"
+      },
+      "native": {}
+    },
+    {
+      "_id": "firewall.lastApplied",
+      "type": "state",
+      "common": {
+        "name": {
+          "en": "Firewall last applied",
+          "de": "Firewall zuletzt angewendet"
+        },
+        "type": "string",
+        "role": "date",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
+    },
+    {
+      "_id": "firewall.allowedTcpPorts",
+      "type": "state",
+      "common": {
+        "name": {
+          "en": "Firewall allowed TCP ports (CSV)",
+          "de": "Firewall erlaubte TCP-Ports (CSV)"
+        },
+        "type": "string",
+        "role": "text",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
+    }
+  ]
+}

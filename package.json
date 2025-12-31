@@ -1,0 +1,34 @@
+{
+  "name": "iobroker.nexowattvpn",
+  "version": "0.0.1",
+  "description": "ioBroker adapter providing a local UI and automation helpers for PiVPN (WireGuard/OpenVPN).",
+  "author": "Nexowatt",
+  "license": "MIT",
+  "main": "main.js",
+  "keywords": [
+    "iobroker",
+    "adapter",
+    "pivpn",
+    "wireguard",
+    "openvpn",
+    "vpn"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nexowatt/ioBroker.nexowattvpn"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "dependencies": {
+    "@iobroker/adapter-core": "^3.2.3",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@iobroker/testing": "^5.0.2"
+  },
+  "scripts": {
+    "test": "node node_modules/@iobroker/testing/build/run-tests.js",
+    "lint": "node node_modules/@iobroker/testing/build/lint.js"
+  }
+}
