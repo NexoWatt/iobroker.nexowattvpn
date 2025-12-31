@@ -1,0 +1,9 @@
+[Unit]
+Description=NexoWattVPN auto-install trigger when adapter helper appears
+
+[Path]
+PathExists=/opt/iobroker/node_modules/iobroker.nexowattvpn/lib/root-helper.js
+Unit=nexowattvpn-autoinstall.service
+
+[Install]
+WantedBy=multi-user.target

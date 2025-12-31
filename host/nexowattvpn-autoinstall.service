@@ -1,0 +1,8 @@
+[Unit]
+Description=NexoWattVPN host auto-install (oneshot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/nexowattvpn-autoinstall.sh

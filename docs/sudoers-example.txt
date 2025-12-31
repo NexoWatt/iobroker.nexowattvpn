@@ -1,0 +1,6 @@
+# Example sudoers file for ioBroker.nexowattvpn
+# Edit with: sudo visudo -f /etc/sudoers.d/nexowattvpn
+#
+# Adjust the node path if your ioBroker uses a different Node.js binary.
+
+iobroker ALL=(root) NOPASSWD: /usr/bin/node /opt/iobroker/node_modules/iobroker.nexowattvpn/lib/root-helper.js *

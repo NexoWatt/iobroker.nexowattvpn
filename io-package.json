@@ -1,150 +1,87 @@
 {
   "common": {
     "name": "nexowattvpn",
-    "version": "0.0.1",
+    "version": "0.0.7",
     "news": {
       "0.0.1": {
-        "en": "Initial development version.",
-        "de": "Initiale Entwicklungsversion."
+        "en": "Initial scaffold with WireGuard + firewall helper.",
+        "de": "Initiales Gerüst mit WireGuard- und Firewall-Helper."
+      },
+      "0.0.2": {
+        "en": "Firewall backend fixed to nftables; added profile listing (from config).",
+        "de": "Firewall-Backend fest auf nftables gesetzt; Profil-Liste (aus Konfiguration) ergänzt."
+      },
+      "0.0.3": {
+        "en": "Added QR output + last-output panel; profile revoke dropdown; service binding check in Admin UI.",
+        "de": "QR-Ausgabe + Last-Output-Panel ergänzt; Profil-Entzug per Dropdown; Bind-/Exposure-Check im Admin-UI."
+      },
+      "0.0.4": {
+        "en": "Added installer tab (nftables/WireGuard prereqs), bootstrap helper for sudoers, and opt-in Support Access (time-limited, revocable).",
+        "de": "Installations-Tab (nftables/WireGuard Voraussetzungen), Bootstrap-Helper für sudoers sowie opt-in Support-Zugang (zeitlich begrenzt, widerrufbar) ergänzt."
+      },
+      "0.0.5": {
+        "en": "Added factory host auto-installer (systemd path/timer) for zero-touch provisioning on vendor devices.",
+        "de": "Factory Host Auto-Installer (systemd Path/Timer) für Zero-Touch Provisioning auf Hersteller-Geräten ergänzt."
+      },
+      "0.0.6": {
+        "en": "Improved documentation and packaging tweaks.",
+        "de": "Dokumentation und Packaging verbessert."
+      },
+      "0.0.7": {
+        "en": "Fixed: host/ folder is now included in the npm package; added one-click full setup and safer prerequisite install behavior.",
+        "de": "Fix: host/ Ordner wird jetzt ins npm-Paket aufgenommen; One-Click Full-Setup ergänzt und Prereq-Installation robuster gemacht."
       }
     },
     "titleLang": {
-      "en": "Nexowatt VPN (PiVPN UI)",
-      "de": "Nexowatt VPN (PiVPN UI)"
+      "en": "NexoWattVPN",
+      "de": "NexoWattVPN"
     },
     "desc": {
-      "en": "Local UI helpers for PiVPN (WireGuard/OpenVPN): create/remove clients, export configs, optional VPN-to-RPi firewall hardening.",
-      "de": "Lokale UI-Helfer für PiVPN (WireGuard/OpenVPN): Clients anlegen/entfernen, Configs exportieren, optional VPN-zu-RPi Firewall-Härtung."
+      "en": "WireGuard VPN with strict access to ioBroker Admin/VIS and selected ports only.",
+      "de": "WireGuard-VPN mit strengem Zugriff nur auf ioBroker Admin/VIS und ausgewählte Ports."
     },
     "authors": [
-      "Nexowatt"
+      "NexoWatt (generated scaffold)"
     ],
     "keywords": [
-      "pivpn",
       "wireguard",
-      "openvpn",
       "vpn",
-      "nexowatt"
+      "firewall",
+      "remote access"
     ],
     "license": "MIT",
     "platform": "Javascript/Node.js",
     "mode": "daemon",
-    "type": "utility",
-    "compact": true,
+    "icon": "nexowattvpn.png",
+    "extIcon": "https://raw.githubusercontent.com/nexowatt/iobroker.nexowattvpn/master/admin/nexowattvpn.png",
+    "adminUI": {
+      "config": "json"
+    },
     "connectionType": "local",
     "dataSource": "push",
-    "enabled": true,
-    "materialize": true,
-    "icon": "nexowattvpn.png",
-    "loglevel": "info"
+    "tier": 2,
+    "supportCustoms": false,
+    "main": "main.js",
+    "type": "utility"
   },
   "native": {
-    "useSudo": true,
-    "pivpnBinary": "/usr/local/bin/pivpn",
-    "protocol": "auto",
-    "blockForwarding": true,
-    "restrictPorts": false,
-    "extraTcpPorts": "8086,8188",
-    "extraUdpPorts": "",
-    "defaultCustomerScope": "hostOnly",
-    "defaultServiceScope": "fullTunnel"
+    "enabled": false,
+    "ifaceName": "wg-nexowattvpn",
+    "listenPort": 51820,
+    "vpnCidr": "10.80.80.0/24",
+    "hostVpnIp": "10.80.80.1/24",
+    "endpointHost": "",
+    "dns": "",
+    "persistentKeepalive": 25,
+    "allowedPorts": "8081,8082,8188,8086",
+    "firewallBackend": "nft",
+    "openListenPort": false,
+    "usePsk": true,
+    "serviceUser": "iobroker",
+    "supportPeerName": "nexowatt-support",
+    "supportPeerPublicKey": "",
+    "supportExpiryMinutes": 60
   },
-  "instanceObjects": [
-    {
-      "_id": "info.connection",
-      "type": "state",
-      "common": {
-        "name": {
-          "en": "VPN service reachable",
-          "de": "VPN-Dienst erreichbar"
-        },
-        "type": "boolean",
-        "role": "indicator.connected",
-        "read": true,
-        "write": false,
-        "def": false
-      },
-      "native": {}
-    },
-    {
-      "_id": "info.protocol",
-      "type": "state",
-      "common": {
-        "name": {
-          "en": "Detected VPN protocol",
-          "de": "Erkanntes VPN-Protokoll"
-        },
-        "type": "string",
-        "role": "text",
-        "read": true,
-        "write": false,
-        "def": ""
-      },
-      "native": {}
-    },
-    {
-      "_id": "info.lastError",
-      "type": "state",
-      "common": {
-        "name": {
-          "en": "Last error",
-          "de": "Letzter Fehler"
-        },
-        "type": "string",
-        "role": "text",
-        "read": true,
-        "write": false,
-        "def": ""
-      },
-      "native": {}
-    },
-    {
-      "_id": "profiles.meta",
-      "type": "state",
-      "common": {
-        "name": {
-          "en": "Profiles metadata (JSON)",
-          "de": "Profil-Metadaten (JSON)"
-        },
-        "type": "string",
-        "role": "json",
-        "read": true,
-        "write": true,
-        "def": "{}"
-      },
-      "native": {}
-    },
-    {
-      "_id": "firewall.lastApplied",
-      "type": "state",
-      "common": {
-        "name": {
-          "en": "Firewall last applied",
-          "de": "Firewall zuletzt angewendet"
-        },
-        "type": "string",
-        "role": "date",
-        "read": true,
-        "write": false,
-        "def": ""
-      },
-      "native": {}
-    },
-    {
-      "_id": "firewall.allowedTcpPorts",
-      "type": "state",
-      "common": {
-        "name": {
-          "en": "Firewall allowed TCP ports (CSV)",
-          "de": "Firewall erlaubte TCP-Ports (CSV)"
-        },
-        "type": "string",
-        "role": "text",
-        "read": true,
-        "write": false,
-        "def": ""
-      },
-      "native": {}
-    }
-  ]
+  "objects": [],
+  "instanceObjects": []
 }

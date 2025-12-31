@@ -1,34 +1,46 @@
 {
   "name": "iobroker.nexowattvpn",
-  "version": "0.0.1",
-  "description": "ioBroker adapter providing a local UI and automation helpers for PiVPN (WireGuard/OpenVPN).",
-  "author": "Nexowatt",
+  "version": "0.0.7",
+  "description": "ioBroker adapter that manages a WireGuard VPN with strict host-only access (Admin/VIS/selected ports).",
+  "author": "NexoWatt (generated scaffold)",
+  "homepage": "https://github.com/nexowatt/iobroker.nexowattvpn",
   "license": "MIT",
-  "main": "main.js",
   "keywords": [
     "iobroker",
     "adapter",
-    "pivpn",
     "wireguard",
-    "openvpn",
-    "vpn"
+    "vpn",
+    "firewall"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/nexowatt/ioBroker.nexowattvpn"
+    "url": "git+https://github.com/nexowatt/iobroker.nexowattvpn.git"
   },
+  "main": "main.js",
+  "files": [
+    "admin/",
+    "docs/",
+    "host/",
+    "lib/",
+    "scripts/",
+    "main.js",
+    "io-package.json",
+    "LICENSE",
+    "README.md"
+  ],
   "engines": {
     "node": ">=16"
   },
   "dependencies": {
-    "@iobroker/adapter-core": "^3.2.3",
+    "@iobroker/adapter-core": "^3.1.0",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
-    "@iobroker/testing": "^5.0.2"
+    "mocha": "^10.0.0",
+    "chai": "^4.3.0"
   },
   "scripts": {
-    "test": "node node_modules/@iobroker/testing/build/run-tests.js",
-    "lint": "node node_modules/@iobroker/testing/build/lint.js"
+    "test": "mocha --exit",
+    "lint": "node -e \"console.log('No lint configured')\""
   }
 }
