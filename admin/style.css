@@ -1,0 +1,77 @@
+.adapter-container .section {
+  margin-top: 18px;
+  padding-top: 8px;
+  border-top: 1px solid #ddd;
+}
+
+.label {
+  width: 260px;
+  font-weight: 600;
+  padding-right: 10px;
+}
+
+.actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.btn {
+  padding: 6px 10px;
+  border: 1px solid #777;
+  background: #f3f3f3;
+  cursor: pointer;
+}
+
+.btn.warn {
+  border-color: #b00;
+}
+
+.note {
+  background: #fff9d7;
+  border: 1px solid #e0d9a8;
+  padding: 10px;
+  margin: 10px 0;
+}
+
+#log {
+  height: 180px;
+  overflow: auto;
+  background: #111;
+  color: #ddd;
+  padding: 10px;
+}
+
+.peer-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.peer-col textarea#peerConfig {
+  width: 100%;
+  min-height: 220px;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+#qrImg {
+  max-width: 320px;
+  max-height: 320px;
+  border: 1px solid #ccc;
+  background: #fff;
+}
+
+table.peers {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table.peers th, table.peers td {
+  border: 1px solid #ddd;
+  padding: 4px 6px;
+  font-size: 12px;
+}

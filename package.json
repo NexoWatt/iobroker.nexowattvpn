@@ -1,0 +1,45 @@
+{
+  "name": "iobroker.nexowattvpn",
+  "version": "0.0.1",
+  "description": "ioBroker adapter to manage PiVPN/WireGuard profiles and restrict access to ioBroker only (NexoWattVPN).",
+  "author": "NexoWatt (generated)",
+  "license": "MIT",
+  "main": "main.js",
+  "keywords": [
+    "ioBroker",
+    "PiVPN",
+    "WireGuard",
+    "VPN",
+    "Nexowatt"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourname/iobroker.nexowattvpn.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourname/iobroker.nexowattvpn/issues"
+  },
+  "homepage": "https://github.com/yourname/iobroker.nexowattvpn#readme",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@iobroker/adapter-core": "^3.2.3",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "node main.js",
+    "lint": "echo \"No lint configured\"",
+    "test": "echo \"No tests configured\""
+  },
+  "files": [
+    "admin/**/*",
+    "lib/**/*",
+    "scripts/**/*",
+    "main.js",
+    "io-package.json",
+    "LICENSE",
+    "README.md"
+  ]
+}

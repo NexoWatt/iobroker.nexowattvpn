@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>NexoWattVPN</title>
+
+  <link rel="stylesheet" type="text/css" href="../../css/adapter.css"/>
+  <link rel="stylesheet" type="text/css" href="style.css"/>
+
+  <script type="text/javascript" src="../../lib/js/jquery-3.2.1.min.js"></script>
+  <script type="text/javascript" src="../../socket.io/socket.io.js"></script>
+  <script type="text/javascript" src="../../js/translate.js"></script>
+  <script type="text/javascript" src="../../js/adapter-settings.js"></script>
+
+  <script type="text/javascript" src="words.js"></script>
+</head>
+
+<body>
+  <div class="m adapter-container">
+
+    <h2 class="translate">NexoWattVPN</h2>
+
+    <div class="note">
+      <div class="translate">
+        Dieser Adapter verwaltet PiVPN/WireGuard über einen Root-Helper (/usr/local/sbin/nexowattvpn-helper).
+        Bitte zuerst das Root-Setup aus dem Repository ausführen: <code>sudo bash scripts/root/install-root.sh</code>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3 class="translate">Grundkonfiguration</h3>
+
+      <table>
+        <tr>
+          <td class="label translate">Endpoint Host (DDNS / Public IP)</td>
+          <td><input id="endpointHost" type="text" class="value" /></td>
+        </tr>
+        <tr>
+          <td class="label translate">Port</td>
+          <td><input id="port" type="number" class="value" min="1" max="65535"/></td>
+        </tr>
+        <tr>
+          <td class="label translate">AllowedIPs Mode</td>
+          <td>
+            <select id="allowedIpsMode" class="value">
+              <option value="hostOnly" class="translate">Host-only (nur VPN-Server-IP)</option>
+              <option value="custom" class="translate">Custom</option>
+            </select>
+          </td>
+        </tr>
+        <tr id="rowAllowedIpsCustom">
+          <td class="label translate">AllowedIPs Custom</td>
+          <td><input id="allowedIpsCustom" type="text" class="value" placeholder="z. B. 10.6.0.1/32"/></td>
+        </tr>
+        <tr>
+          <td class="label translate">DNS 1 (optional)</td>
+          <td><input id="dns1" type="text" class="value" placeholder="z. B. 1.1.1.1"/></td>
+        </tr>
+        <tr>
+          <td class="label translate">DNS 2 (optional)</td>
+          <td><input id="dns2" type="text" class="value" placeholder="z. B. 9.9.9.9"/></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3 class="translate">Firewall / Port-Restriktion (Interface wg0)</h3>
+
+      <table>
+        <tr>
+          <td class="label translate">Service-Ports (TCP)</td>
+          <td><input id="servicePortsTcp" type="text" class="value" placeholder="8081,8082"/></td>
+        </tr>
+        <tr>
+          <td class="label translate">Customer-Ports (TCP)</td>
+          <td><input id="customerPortsTcp" type="text" class="value" placeholder="8082"/></td>
+        </tr>
+        <tr>
+          <td class="label translate">Auto Firewall anwenden</td>
+          <td><input id="autoApplyFirewall" type="checkbox" class="value"/></td>
+        </tr>
+      </table>
+
+      <div class="actions">
+        <button id="btnApplyFirewall" class="btn translate">Firewall anwenden</button>
+        <button id="btnClearFirewall" class="btn warn translate">Firewall entfernen</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3 class="translate">Aktionen</h3>
+      <div class="actions">
+        <button id="btnStatus" class="btn translate">Status aktualisieren</button>
+        <button id="btnApplyConfig" class="btn translate">Konfiguration anwenden</button>
+        <button id="btnListPeers" class="btn translate">Peers laden</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3 class="translate">Peers / Profile</h3>
+
+      <table>
+        <tr>
+          <td class="label translate">Peer-Name</td>
+          <td><input id="peerName" type="text" placeholder="z. B. service01 oder kunde01"/></td>
+          <td class="label translate">Rolle</td>
+          <td>
+            <select id="peerRole">
+              <option value="service" class="translate">Service</option>
+              <option value="customer" class="translate">Customer</option>
+            </select>
+          </td>
+          <td><button id="btnAddPeer" class="btn translate">Peer erstellen</button></td>
+        </tr>
+      </table>
+
+      <div class="actions">
+        <input id="peerNameAction" type="text" placeholder="Peer-Name für Aktion"/>
+        <button id="btnDisablePeer" class="btn warn translate">Deaktivieren</button>
+        <button id="btnEnablePeer" class="btn translate">Aktivieren</button>
+        <button id="btnRemovePeer" class="btn warn translate">Entfernen</button>
+        <button id="btnGetPeerConfig" class="btn translate">Config anzeigen</button>
+        <button id="btnGetPeerQr" class="btn translate">QR anzeigen</button>
+      </div>
+
+      <div class="peer-grid">
+        <div class="peer-col">
+          <h4 class="translate">Peer-Liste</h4>
+          <div id="peerTable"></div>
+        </div>
+
+        <div class="peer-col">
+          <h4 class="translate">Peer-Config</h4>
+          <textarea id="peerConfig" readonly></textarea>
+
+          <h4 class="translate">QR Code</h4>
+          <img id="qrImg" alt="QR" />
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3 class="translate">Log</h3>
+      <pre id="log"></pre>
+    </div>
+
+  </div>
+
+<script type="text/javascript">
+  function appendLog(obj) {
+    const s = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
+    const el = $('#log');
+    el.text(el.text() + (el.text() ? "\n" : "") + s);
+    el.scrollTop(el[0].scrollHeight);
+  }
+
+  function renderPeers(peers) {
+    if (!peers || !peers.peers) {
+      $('#peerTable').html('<div class="note">No data</div>');
+      return;
+    }
+    const rows = peers.peers.map(p => `
+      <tr>
+        <td>${p.name}</td>
+        <td>${p.ip || ''}</td>
+        <td>${p.role || ''}</td>
+        <td>${p.disabled ? 'disabled' : 'enabled'}</td>
+      </tr>
+    `).join('');
+    $('#peerTable').html(`
+      <table class="peers">
+        <thead><tr><th>Name</th><th>IP</th><th>Role</th><th>Status</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `);
+  }
+
+  function getConfigPayload() {
+    return {
+      endpointHost: ($('#endpointHost').val() || '').trim(),
+      port: Number($('#port').val() || 0),
+      allowedIpsMode: $('#allowedIpsMode').val(),
+      allowedIpsCustom: ($('#allowedIpsCustom').val() || '').trim(),
+      dns1: ($('#dns1').val() || '').trim(),
+      dns2: ($('#dns2').val() || '').trim()
+    };
+  }
+
+  function getPeerNameFromAction() {
+    return ($('#peerNameAction').val() || '').trim();
+  }
+
+  function refreshAllowedIpsVisibility() {
+    const mode = $('#allowedIpsMode').val();
+    if (mode === 'custom') {
+      $('#rowAllowedIpsCustom').show();
+    } else {
+      $('#rowAllowedIpsCustom').hide();
+    }
+  }
+
+  function load(settings, onChange) {
+    if (!settings) return;
+
+    $('.value').each(function () {
+      const id = $(this).attr('id');
+      if ($(this).attr('type') === 'checkbox') {
+        $(this).prop('checked', settings[id]);
+      } else {
+        $(this).val(settings[id]);
+      }
+    });
+
+    $('#allowedIpsMode').on('change', function() {
+      refreshAllowedIpsVisibility();
+      onChange();
+    });
+
+    $('.value').on('change keyup', function () {
+      onChange();
+    });
+
+    refreshAllowedIpsVisibility();
+
+    onChange(false);
+
+    // Button handlers
+    $('#btnStatus').on('click', function() {
+      sendTo(null, 'status', null, function (res) {
+        appendLog(res);
+      });
+    });
+
+    $('#btnApplyConfig').on('click', function() {
+      sendTo(null, 'applyConfig', getConfigPayload(), function (res) {
+        appendLog(res);
+      });
+    });
+
+    $('#btnListPeers').on('click', function() {
+      sendTo(null, 'listPeers', null, function (res) {
+        appendLog(res);
+        if (res && res.peers) renderPeers(res.peers);
+      });
+    });
+
+    $('#btnAddPeer').on('click', function() {
+      const name = ($('#peerName').val() || '').trim();
+      const role = $('#peerRole').val();
+      sendTo(null, 'addPeer', { name, role }, function (res) {
+        appendLog(res);
+      });
+    });
+
+    $('#btnRemovePeer').on('click', function() {
+      const name = getPeerNameFromAction();
+      sendTo(null, 'removePeer', { name }, function (res) {
+        appendLog(res);
+      });
+    });
+
+    $('#btnDisablePeer').on('click', function() {
+      const name = getPeerNameFromAction();
+      sendTo(null, 'disablePeer', { name }, function (res) {
+        appendLog(res);
+      });
+    });
+
+    $('#btnEnablePeer').on('click', function() {
+      const name = getPeerNameFromAction();
+      sendTo(null, 'enablePeer', { name }, function (res) {
+        appendLog(res);
+      });
+    });
+
+    $('#btnGetPeerConfig').on('click', function() {
+      const name = getPeerNameFromAction();
+      sendTo(null, 'getPeerConfig', { name }, function (res) {
+        appendLog({ ok: res.ok, name: res.name });
+        if (res && res.config) {
+          $('#peerConfig').val(res.config);
+          $('#qrImg').attr('src', '');
+        }
+      });
+    });
+
+    $('#btnGetPeerQr').on('click', function() {
+      const name = getPeerNameFromAction();
+      sendTo(null, 'getPeerQr', { name }, function (res) {
+        appendLog({ ok: res.ok, name: res.name });
+        if (res && res.dataUrl) {
+          $('#qrImg').attr('src', res.dataUrl);
+        }
+      });
+    });
+
+    $('#btnApplyFirewall').on('click', function() {
+      sendTo(null, 'applyFirewall', null, function (res) {
+        appendLog(res);
+      });
+    });
+
+    $('#btnClearFirewall').on('click', function() {
+      sendTo(null, 'clearFirewall', null, function (res) {
+        appendLog(res);
+      });
+    });
+  }
+
+  function save(callback) {
+    const obj = {};
+    $('.value').each(function () {
+      const id = $(this).attr('id');
+      if ($(this).attr('type') === 'checkbox') {
+        obj[id] = $(this).prop('checked');
+      } else {
+        obj[id] = $(this).val();
+      }
+    });
+    callback(obj);
+  }
+</script>
+</body>
+</html>
